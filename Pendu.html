@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pendu — Jeu HTML/CSS/JS</title>
+  <style>
+    :root{
+      --bg:#0f1318;
+      --panel:#151b23;
+      --accent:#4f9cf4;
+      --accent-2:#82d173;
+      --text:#e9eef7;
+      --muted:#a7b3c6;
+      --danger:#ff6b6b;
+      --shadow: 0 12px 32px rgba(0,0,0,0.35);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 800px at 30% 10%, #121820 20%, #0d1117 100%);
+      color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol";
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+
+    .app{
+      width: min(960px, 95vw);
+      display:grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap:24px;
+      align-items:start;
+    }
+    @media (max-width: 860px){
+      .app{grid-template-columns: 1fr}
+    }
+
+    .card{
+      background:linear-gradient(180deg, var(--panel), #11161d);
+      border: 1px solid #1e2630;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    header.card{
+      padding:20px 24px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .title{
+      display:flex; gap:14px; align-items:center;
+    }
+    .logo{
+      width:38px; height:38px; border-radius:10px;
+      background: conic-gradient(from 210deg at 50% 50%, #4f9cf4, #82d173, #ffd166, #4f9cf4);
+      box-shadow: 0 6px 18px rgba(79,156,244,0.35);
+    }
+    h1{
+      margin:0; font-size:1.25rem; letter-spacing:.3px; font-weight:700;
+    }
+    .sub{color:var(--muted); font-size:.92rem}
+
+    .board.card{padding:24px}
+    .row{display:grid; grid-template-columns: 1fr 1fr; gap:24px}
+    @media (max-width: 860px){
+      .row{grid-template-columns: 1fr}
+    }
+
+    /* Panneau gauche: dessin + mot */
+    .left{
+      background:linear-gradient(180deg, #121720, #0f141b 75%);
+      border-radius:12px; border:1px solid #1c2430; padding:20px;
+    }
+    .hangman{
+      height:240px; position:relative; margin-bottom:12px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .gallows, .part{position:absolute}
+    /* Gallows */
+    .gallows:before, .gallows:after{
+      content:""; position:absolute; background:#3a4758;
+    }
+    /* Base */
+    .gallows.base{left:50%; transform:translateX(-50%); bottom:8px; width:220px; height:10px; border-radius:5px}
+    /* Pilier */
+    .gallows.pillar{left:22%; bottom:18px; width:10px; height:190px; border-radius:5px}
+    /* Bras */
+    .gallows.arm{left:22%; top:22px; width:140px; height:10px; border-radius:5px}
+    /* Corde */
+    .gallows.rope{left:56%; top:32px; width:3px; height:36px; background:#6b7a90; border-radius:3px}
+
+    /* Corps du pendu (masqué par défaut, révélé selon erreurs) */
+    .part{opacity:0; transition:opacity .25s ease}
+    .part.show{opacity:1}
+    .head{left:56%; top:64px; width:40px; height:40px; border-radius:50%; border:4px solid #e0e6f2}
+    .body{left:56%; top:104px; width:4px; height:64px; background:#e0e6f2}
+    .arm-l{left:56%; top:118px; width:40px; height:4px; background:#e0e6f2; transform-origin:left; transform:rotate(-28deg)}
+    .arm-r{left:56%; top:118px; width:40px; height:4px; background:#e0e6f2; transform-origin:right; transform:rotate(28deg)}
+    .leg-l{left:56%; top:166px; width:36px; height:4px; background:#e0e6f2; transform-origin:left; transform:rotate(30deg)}
+    .leg-r{left:56%; top:166px; width:36px; height:4px; background:#e0e6f2; transform-origin:right; transform:rotate(-30deg)}
+
+    .word{
+      letter-spacing:.32em;
+      font-weight:700;
+      font-size:1.6rem;
+      text-align:center;
+      background:#0d1218;
+      border:1px dashed #263042;
+      color:#dfe7f3;
+      border-radius:12px;
+      padding:12px 16px;
+    }
+    .hint{
+      margin-top:10px; font-size:.95rem; color:var(--muted); text-align:center;
+    }
+
+    /* Panneau droit: clavier et stats */
+    .right{
+      display:grid; gap:16px;
+    }
+    .stats{
+      display:flex; gap:14px; flex-wrap:wrap; align-items:center;
+      background:#10151c; border:1px solid #1f2734; border-radius:12px; padding:12px 14px;
+    }
+    .badge{
+      background:#0b1726; border:1px solid #223045; color:#cfd7e6;
+      padding:8px 10px; border-radius:10px; font-weight:600; font-size:.92rem;
+    }
+    .badge.accent{border-color:#3b7bdc; color:#bcd5ff}
+    .badge.good{border-color:#2d8b57; color:#cfeedd}
+    .badge.bad{border-color:#c84b4b; color:#ffd7d7}
+
+    .keyboard{
+      display:grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap:8px;
+    }
+    @media (max-width: 420px){
+      .keyboard{grid-template-columns: repeat(7, 1fr)}
+    }
+    button.key{
+      appearance:none;
+      background:#141b24;
+      color:#eaf0fb;
+      border:1px solid #243246;
+      border-radius:10px;
+      padding:10px 0;
+      font-weight:700;
+      cursor:pointer;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+    }
+    button.key:hover{transform:translateY(-1px); background:#17202b}
+    button.key:disabled{
+      opacity:.55; cursor:not-allowed; transform:none;
+      background:#121822; color:#aab6c7; border-color:#1f2a3b;
+    }
+    .actions{
+      display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;
+    }
+    .btn{
+      appearance:none; cursor:pointer;
+      background:#172131; color:#dfe7f3; border:1px solid #28364a;
+      border-radius:12px; padding:10px 14px; font-weight:700;
+    }
+    .btn.primary{border-color:#3b7bdc; background:#163255}
+    .btn.primary:hover{background:#183a63}
+    .btn.ghost{background:#0e141c}
+    .btn.danger{border-color:#c84b4b; background:#2a0f12; color:#ffd7d7}
+
+    /* Modal victoire/défaite */
+    .modal{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.55);
+      padding:20px;
+    }
+    .modal.show{display:flex}
+    .modal .dialog{
+      width:min(560px, 95vw);
+      background:linear-gradient(180deg, #121820, #0f141b);
+      border:1px solid #223045;
+      border-radius:18px;
+      box-shadow: var(--shadow);
+      padding:20px 20px 16px;
+      text-align:center;
+    }
+    .dialog h2{margin:4px 0 8px 0; font-size:1.3rem}
+    .dialog p{color:#cbd5e7}
+    .dialog .word-reveal{font-weight:800; font-size:1.1rem; color:#ffffff}
+    .dialog .cta{margin-top:14px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="card">
+      <div class="title">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Pendu</h1>
+          <div class="sub">Devine le mot avant que le pendu ne soit complet.</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="btn-new">Nouveau mot</button>
+        <button class="btn primary" id="btn-reset">Réinitialiser score</button>
+      </div>
+    </header>
+
+    <div class="board card">
+      <div class="row">
+        <section class="left">
+          <div class="hangman" aria-live="polite">
+            <div class="gallows base"></div>
+            <div class="gallows pillar"></div>
+            <div class="gallows arm"></div>
+            <div class="gallows rope"></div>
+            <div class="part head" id="p-head"></div>
+            <div class="part body" id="p-body"></div>
+            <div class="part arm-l" id="p-arm-l"></div>
+            <div class="part arm-r" id="p-arm-r"></div>
+            <div class="part leg-l" id="p-leg-l"></div>
+            <div class="part leg-r" id="p-leg-r"></div>
+          </div>
+          <div class="word" id="word">_ _ _ _ _</div>
+          <div class="hint" id="hint">Indice: catégorie générale en français</div>
+        </section>
+
+        <section class="right">
+          <div class="stats">
+            <div class="badge accent">Essais max: <strong id="max-attempts">6</strong></div>
+            <div class="badge good">Bonnes lettres: <strong id="good">0</strong></div>
+            <div class="badge bad">Erreurs: <strong id="bad">0</strong></div>
+            <div class="badge">Victoires: <strong id="wins">0</strong></div>
+            <div class="badge">Défaites: <strong id="losses">0</strong></div>
+          </div>
+
+          <div class="keyboard" id="keyboard" aria-label="Clavier du pendu"></div>
+          <div class="actions">
+            <button class="btn" id="btn-shuffle">Mélanger liste</button>
+            <button class="btn danger" id="btn-giveup">Abandonner</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" id="modal">
+    <div class="dialog">
+      <h2 id="modal-title">Bravo !</h2>
+      <p id="modal-text">Tu as trouvé le mot.</p>
+      <p class="word-reveal" id="modal-word"></p>
+      <div class="cta">
+        <button class="btn primary" id="modal-next">Nouveau mot</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ———————————— Liste de mots (sans accents pour simplifier la saisie) ————————————
+    const WORDS = [
+      { w:"ORDINATEUR", hint:"Technologie" },
+      { w:"ALGORITHME", hint:"Informatique" },
+      { w:"PYTHON", hint:"Langage" },
+      { w:"DONNEES", hint:"Big Data" },
+      { w:"SERVEUR", hint:"Réseau" },
+      { w:"LOGICIEL", hint:"Tech" },
+      { w:"NUAGE", hint:"Cloud" },
+      { w:"SECURITE", hint:"Système" },
+      { w:"GRAPHIQUE", hint:"Visualisation" },
+      { w:"STATISTIQUE", hint:"Analyse" },
+      { w:"MODULE", hint:"Dev" },
+      { w:"COMPILATEUR", hint:"Bas niveau" },
+      { w:"RESEAU", hint:"Communication" },
+      { w:"BASE", hint:"Données" },
+      { w:"TABLEAU", hint:"Structure" },
+      { w:"FONCTION", hint:"Calcul" },
+      { w:"INTERFACE", hint:"UI/UX" },
+      { w:"CAPGEMINI", hint:"Entreprise" },
+      { w:"PARIS", hint:"Ville" },
+      { w:"EDUCATION", hint:"Université" }
+    ];
+
+    // ———————————— État du jeu ————————————
+    const MAX_ERRORS = 6;
+    let index = 0;
+    let chosen = null;        // {w, hint}
+    let revealed = [];        // tableau des lettres révélées (booléens)
+    let goodCount = 0;
+    let badCount = 0;
+    let wins = 0;
+    let losses = 0;
+
+    // ———————————— Sélecteurs ————————————
+    const elWord = document.getElementById('word');
+    const elHint = document.getElementById('hint');
+    const elKeyboard = document.getElementById('keyboard');
+    const elGood = document.getElementById('good');
+    const elBad = document.getElementById('bad');
+    const elWins = document.getElementById('wins');
+    const elLosses = document.getElementById('losses');
+    const elMax = document.getElementById('max-attempts');
+
+    const parts = [
+      document.getElementById('p-head'),
+      document.getElementById('p-body'),
+      document.getElementById('p-arm-l'),
+      document.getElementById('p-arm-r'),
+      document.getElementById('p-leg-l'),
+      document.getElementById('p-leg-r'),
+    ];
+
+    const btnNew = document.getElementById('btn-new');
+    const btnReset = document.getElementById('btn-reset');
+    const btnShuffle = document.getElementById('btn-shuffle');
+    const btnGiveup = document.getElementById('btn-giveup');
+
+    // Modal
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalText = document.getElementById('modal-text');
+    const modalWord = document.getElementById('modal-word');
+    const modalNext = document.getElementById('modal-next');
+
+    // ———————————— Clavier ————————————
+    const LETTERS = "AZERTYUIOPQSDFGHJKLMWXCVBN".split('');
+    function renderKeyboard(){
+      elKeyboard.innerHTML = '';
+      LETTERS.forEach(ch=>{
+        const b = document.createElement('button');
+        b.className = 'key';
+        b.textContent = ch;
+        b.setAttribute('data-letter', ch);
+        b.addEventListener('click', ()=>guess(ch));
+        elKeyboard.appendChild(b);
+      });
+      // Saisie clavier physique
+      window.onkeydown = (e)=>{
+        const key = e.key.toUpperCase();
+        if(LETTERS.includes(key)){
+          guess(key);
+        }
+      };
+    }
+
+    // ———————————— Nouvel état ————————————
+    function pickWord(){
+      chosen = WORDS[index % WORDS.length];
+      index++;
+      revealed = Array(chosen.w.length).fill(false);
+      goodCount = 0;
+      badCount = 0;
+      elGood.textContent = '0';
+      elBad.textContent = '0';
+      elMax.textContent = MAX_ERRORS.toString();
+      parts.forEach(p=>p.classList.remove('show'));
+      elHint.textContent = 'Indice: ' + chosen.hint;
+      updateWord();
+      enableKeyboard(true);
+    }
+
+    function updateWord(){
+      const s = chosen.w.split('').map((ch, i)=> revealed[i] ? ch : '_').join(' ');
+      elWord.textContent = s;
+    }
+
+    function enableKeyboard(enabled){
+      [...elKeyboard.querySelectorAll('button.key')].forEach(b=>{
+        b.disabled = !enabled ? true : false;
+        b.classList.remove('used-good','used-bad');
+      });
+    }
+
+    function disableLetter(ch, good){
+      const btn = elKeyboard.querySelector(`button[data-letter="${ch}"]`);
+      if(btn){
+        btn.disabled = true;
+        btn.style.borderColor = good ? '#2d8b57' : '#c84b4b';
+        btn.style.background = good ? '#13261b' : '#2a0f12';
+        btn.style.color = good ? '#cfeedd' : '#ffd7d7';
+      }
+    }
+
+    // ———————————— Logique de jeu ————————————
+    function guess(ch){
+      if(!chosen) return;
+
+      // ignorons les duplications
+      const btn = elKeyboard.querySelector(`button[data-letter="${ch}"]`);
+      if(btn && btn.disabled) return;
+
+      const positions = [];
+      for(let i=0;i<chosen.w.length;i++){
+        if(chosen.w[i] === ch) positions.push(i);
+      }
+
+      if(positions.length){
+        positions.forEach(i=>{
+          if(!revealed[i]){
+            revealed[i] = true;
+            goodCount++;
+          }
+        });
+        elGood.textContent = goodCount.toString();
+        disableLetter(ch, true);
+        updateWord();
+        checkWin();
+      }else{
+        badCount++;
+        elBad.textContent = badCount.toString();
+        disableLetter(ch, false);
+        revealPart(badCount);
+        checkLose();
+      }
+    }
+
+    function revealPart(n){
+      if(n>=1 && n<=parts.length){
+        parts[n-1].classList.add('show');
+      }
+    }
+
+    function checkWin(){
+      if(revealed.every(v=>v)){
+        wins++;
+        elWins.textContent = wins.toString();
+        endGame(true);
+      }
+    }
+
+    function checkLose(){
+      if(badCount >= MAX_ERRORS){
+        losses++;
+        elLosses.textContent = losses.toString();
+        endGame(false);
+      }
+    }
+
+    function endGame(victory){
+      enableKeyboard(false);
+      modalTitle.textContent = victory ? 'Bravo !' : 'Dommage…';
+      modalText.textContent = victory ? 'Tu as trouvé le mot.' : 'Le pendu est complet.';
+      modalWord.textContent = 'Mot: ' + chosen.w;
+      modal.classList.add('show');
+    }
+
+    // ———————————— Actions ————————————
+    btnNew.addEventListener('click', ()=>{
+      modal.classList.remove('show');
+      pickWord();
+    });
+    modalNext.addEventListener('click', ()=>{
+      modal.classList.remove('show');
+      pickWord();
+    });
+    btnReset.addEventListener('click', ()=>{
+      wins = 0; losses = 0;
+      elWins.textContent = '0';
+      elLosses.textContent = '0';
+    });
+    btnShuffle.addEventListener('click', ()=>{
+      // Shuffle in-place (Fisher-Yates)
+      for(let i = WORDS.length-1; i>0; i--){
+        const j = Math.floor(Math.random() * (i+1));
+        [WORDS[i], WORDS[j]] = [WORDS[j], WORDS[i]];
+      }
+      index = 0;
+      pickWord();
+    });
+    btnGiveup.addEventListener('click', ()=>{
+      if(!chosen) return;
+      losses++;
+      elLosses.textContent = losses.toString();
+      endGame(false);
+    });
+
+    // Init
+    renderKeyboard();
+    pickWord();
+    // fermer le modal en cliquant dehors
+    modal.addEventListener('click', (e)=>{
+      if(e.target === modal){ modal.classList.remove('show'); }
+    });
+  </script>
+</body>
+</html>
